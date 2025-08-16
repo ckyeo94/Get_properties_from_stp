@@ -37,23 +37,13 @@ def calculate_mass_properties(parts_df):
 
     total_moi_tensor = np.zeros((3, 3))
     for index, row in parts_df.iterrows():
-        mass = row['Mass (kg)']
-        cog = row['COG_vec']
-        moi_cg_vals = parse_vector_from_string(row[moi_col_name])
+        # The MOI values from the CSV are already relative to the assembly origin.
+        # We just need to sum the tensors of the individual parts.
+        moi_vals = parse_vector_from_string(row[moi_col_name])
+        Ixx, Iyy, Izz, Ixy, Ixz, Iyz = moi_vals
 
-        Ixx, Iyy, Izz, Ixy, Ixz, Iyz = moi_cg_vals
-
-        moi_tensor_cg = np.array([[Ixx, -Ixy, -Ixz], [-Ixy, Iyy, -Iyz], [-Ixz, -Iyz, Izz]])
-
-        dx, dy, dz = cog
-        d_squared_matrix = np.array([
-            [dy**2 + dz**2, -dx*dy, -dx*dz],
-            [-dx*dy, dx**2 + dz**2, -dy*dz],
-            [-dx*dz, -dy*dz, dx**2 + dy**2]
-        ])
-
-        moi_tensor_origin = moi_tensor_cg + mass * d_squared_matrix
-        total_moi_tensor += moi_tensor_origin
+        moi_tensor_part = np.array([[Ixx, -Ixy, -Ixz], [-Ixy, Iyy, -Iyz], [-Ixz, -Iyz, Izz]])
+        total_moi_tensor += moi_tensor_part
 
     combined_moi = np.diag(total_moi_tensor)
 
@@ -121,7 +111,7 @@ def main(mass_scale_factor=1.0):
     random_coords = np.random.uniform(low=min_bounds, high=max_bounds, size=(num_random_coords_needed, 3))
 
     combined_coords = np.vstack((ballast_coords, random_coords))
-    np.random.shuffle(combined_coords)
+    # np.random.shuffle(combined_coords) # Removed shuffling to keep original ballasts first
 
     coords_df = pd.DataFrame(combined_coords, columns=['x', 'y', 'z'])
     coords_df.to_csv('random_ballast_coordinates.csv', index=False)
