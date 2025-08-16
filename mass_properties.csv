@@ -2,7 +2,7 @@ Assembly Mass Properties
 Property,Value
 Mass (kg),248.961439
 Center of Mass (mm),"(-16.4573, 730.0394, 770.5182)"
-Moment of Inertia (kg*mm^2),"(Ixx=2647855302987.7412, Iyy=663490898284.1085, Izz=2706047379672.5254)"
+Moment of Inertia (kg*mm^2),"(Ixx=2647855302987.7412, Iyy=663490898284.1085, Izz=2706047379672.5254, Ixy=1269621.9359, Ixz=-10714719837.2165, Iyz=4093787.7366)"
 
 Individual Object Properties
 Name,Coordinates (mm),Mass (kg),Center of Mass (mm),"Moment of Inertia (kg*mm^2, Ixx, Iyy, Izz, Ixy, Ixz, Iyz)"

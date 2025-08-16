@@ -18,7 +18,7 @@ def calculate_mass_properties(parts_df):
         return {
             'Mass (kg)': 0,
             'Center of Mass (mm)': np.zeros(3),
-            'Moment of Inertia (kg*mm^2)': np.zeros(3)
+            'Moment of Inertia (kg*mm^2)': np.zeros((3, 3))
         }
 
     moi_col_name = 'Moment of Inertia (kg*mm^2, Ixx, Iyy, Izz, Ixy, Ixz, Iyz)'
@@ -28,7 +28,7 @@ def calculate_mass_properties(parts_df):
 
     total_mass = parts_df['Mass (kg)'].sum()
     if total_mass == 0:
-        return {'Mass (kg)': 0, 'Center of Mass (mm)': np.zeros(3), 'Moment of Inertia (kg*mm^2)': np.zeros(3)}
+        return {'Mass (kg)': 0, 'Center of Mass (mm)': np.zeros(3), 'Moment of Inertia (kg*mm^2)': np.zeros((3, 3))}
 
     cog_vectors = np.stack(parts_df['COG_vec'].values)
     masses = parts_df['Mass (kg)'].values[:, np.newaxis]
@@ -45,7 +45,8 @@ def calculate_mass_properties(parts_df):
         moi_tensor_part = np.array([[Ixx, -Ixy, -Ixz], [-Ixy, Iyy, -Iyz], [-Ixz, -Iyz, Izz]])
         total_moi_tensor += moi_tensor_part
 
-    combined_moi = np.diag(total_moi_tensor)
+    # Return the full inertia tensor, not just the diagonal
+    combined_moi = total_moi_tensor
 
     return {
         'Mass (kg)': total_mass,
@@ -79,15 +80,36 @@ def main(mass_scale_factor=1.0):
     initial_props = calculate_mass_properties(initial_df)
     target_props = calculate_mass_properties(full_df.copy())
 
+    # Extract the 6 unique components of the inertia tensor for CSV writing
+    initial_moi_tensor = initial_props['Moment of Inertia (kg*mm^2)']
+    initial_moi_vals = [
+        initial_moi_tensor[0, 0], initial_moi_tensor[1, 1], initial_moi_tensor[2, 2], # Ixx, Iyy, Izz
+        -initial_moi_tensor[0, 1], -initial_moi_tensor[0, 2], -initial_moi_tensor[1, 2] # Ixy, Ixz, Iyz
+    ]
+
+    target_moi_tensor = target_props['Moment of Inertia (kg*mm^2)']
+    target_moi_vals = [
+        target_moi_tensor[0, 0], target_moi_tensor[1, 1], target_moi_tensor[2, 2], # Ixx, Iyy, Izz
+        -target_moi_tensor[0, 1], -target_moi_tensor[0, 2], -target_moi_tensor[1, 2] # Ixy, Ixz, Iyz
+    ]
+
     properties_data = {
-        'Property': ['Mass (kg)', 'COG_x (mm)', 'COG_y (mm)', 'COG_z (mm)', 'MOI_Ixx (kg*mm^2)', 'MOI_Iyy (kg*mm^2)', 'MOI_Izz (kg*mm^2)'],
+        'Property': [
+            'Mass (kg)', 'COG_x (mm)', 'COG_y (mm)', 'COG_z (mm)',
+            'MOI_Ixx (kg*mm^2)', 'MOI_Iyy (kg*mm^2)', 'MOI_Izz (kg*mm^2)',
+            'MOI_Ixy (kg*mm^2)', 'MOI_Ixz (kg*mm^2)', 'MOI_Iyz (kg*mm^2)'
+        ],
         'InitialValue': [
-            initial_props['Mass (kg)'], initial_props['Center of Mass (mm)'][0], initial_props['Center of Mass (mm)'][1], initial_props['Center of Mass (mm)'][2],
-            initial_props['Moment of Inertia (kg*mm^2)'][0], initial_props['Moment of Inertia (kg*mm^2)'][1], initial_props['Moment of Inertia (kg*mm^2)'][2]
+            initial_props['Mass (kg)'],
+            initial_props['Center of Mass (mm)'][0], initial_props['Center of Mass (mm)'][1], initial_props['Center of Mass (mm)'][2],
+            initial_moi_vals[0], initial_moi_vals[1], initial_moi_vals[2],
+            initial_moi_vals[3], initial_moi_vals[4], initial_moi_vals[5]
         ],
         'TargetValue': [
-            target_props['Mass (kg)'], target_props['Center of Mass (mm)'][0], target_props['Center of Mass (mm)'][1], target_props['Center of Mass (mm)'][2],
-            target_props['Moment of Inertia (kg*mm^2)'][0], target_props['Moment of Inertia (kg*mm^2)'][1], target_props['Moment of Inertia (kg*mm^2)'][2]
+            target_props['Mass (kg)'],
+            target_props['Center of Mass (mm)'][0], target_props['Center of Mass (mm)'][1], target_props['Center of Mass (mm)'][2],
+            target_moi_vals[0], target_moi_vals[1], target_moi_vals[2],
+            target_moi_vals[3], target_moi_vals[4], target_moi_vals[5]
         ]
     }
     target_df = pd.DataFrame(properties_data)
