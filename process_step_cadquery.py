@@ -73,21 +73,25 @@ def process_step_file(file_path, output_csv_path, density):
     assembly_cg = (cg_x, cg_y, cg_z)
 
     # Correctly calculate assembly moment of inertia using the parallel axis theorem
-    moi_xx = 0
-    moi_yy = 0
-    moi_zz = 0
+    moi_xx, moi_yy, moi_zz = 0, 0, 0
+    moi_xy, moi_xz, moi_yz = 0, 0, 0
     for comp in components_data:
         mass = comp["mass"]
         comp_cg = comp["center_of_mass"]
-        comp_moi = comp["moment_of_inertia"]
+        comp_moi = comp["moment_of_inertia"] # Ixx, Iyy, Izz, Ixy, Ixz, Iyz
 
         dx = comp_cg[0] - assembly_cg[0]
         dy = comp_cg[1] - assembly_cg[1]
         dz = comp_cg[2] - assembly_cg[2]
 
+        # Diagonal terms
         moi_xx += comp_moi[0] + mass * (dy**2 + dz**2)
         moi_yy += comp_moi[1] + mass * (dx**2 + dz**2)
         moi_zz += comp_moi[2] + mass * (dx**2 + dy**2)
+        # Off-diagonal terms (products of inertia)
+        moi_xy += comp_moi[3] + mass * dx * dy
+        moi_xz += comp_moi[4] + mass * dx * dz
+        moi_yz += comp_moi[5] + mass * dy * dz
 
 
     # Write to CSV
@@ -98,7 +102,9 @@ def process_step_file(file_path, output_csv_path, density):
         writer.writerow(["Property", "Value"])
         writer.writerow(["Mass (kg)", f"{total_mass:.6f}"])
         writer.writerow(["Center of Mass (mm)", f"({cg_x:.4f}, {cg_y:.4f}, {cg_z:.4f})"])
-        writer.writerow(["Moment of Inertia (kg*mm^2)", f"(Ixx={moi_xx:.4f}, Iyy={moi_yy:.4f}, Izz={moi_zz:.4f})"])
+        moi_str = (f"Ixx={moi_xx:.4f}, Iyy={moi_yy:.4f}, Izz={moi_zz:.4f}, "
+                   f"Ixy={moi_xy:.4f}, Ixz={moi_xz:.4f}, Iyz={moi_yz:.4f}")
+        writer.writerow(["Moment of Inertia (kg*mm^2)", f"({moi_str})"])
         writer.writerow([])
 
         writer.writerow(["Individual Object Properties"])
